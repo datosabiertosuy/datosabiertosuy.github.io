@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Asistente de Metadatos – Catálogo de Datos Abiertos</title>
+  <style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #333; background: #f6f6f6; min-height: 100vh; display: flex; flex-direction: column; }
+a { color: #095399; text-decoration: none; } a:hover { text-decoration: underline; }
+address { font-style: normal; } ul { list-style: none; } main { flex: 1; }
+.Container { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
+
+/* HEADER */
+.Header { background: #095399; }
+.Header-top { background: #013E89; border-bottom: 1px solid rgba(255,255,255,.15); padding: 5px 0; }
+.Header-top .Container { display:flex; justify-content:space-between; align-items:center; }
+.Header-top a { color:#fff; font-size:12px; }
+.Brand-text { font-weight:bold; font-size:13px; color:#fff; }
+.Icon--user { display:inline-block; width:22px; height:22px; background:rgba(255,255,255,.18); border-radius:50%; position:relative; }
+.Icon--user::before { content:"👤"; font-size:12px; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); }
+.Header-body { padding: 14px 0 0; }
+.Header-body .Container { display:flex; justify-content:space-between; align-items:flex-end; }
+.Logo-title { font-size:22px; font-weight:bold; color:#fff; line-height:1.2; display:flex; flex-direction:column; }
+.Logo-role { font-size:13px; font-weight:normal; color:rgba(255,255,255,.75); }
+.Nav--flex ul { display:flex; flex-wrap:wrap; }
+.Nav--flex ul li { position:relative; }
+.Nav--flex ul li > a { display:block; color:#fff; font-size:13px; padding:10px 14px; text-decoration:none; }
+.Nav--flex ul li > a:hover { background:rgba(255,255,255,.15); }
+.subnav { display:none; position:absolute; top:100%; left:0; background:#013E89; min-width:230px; z-index:200; border-top:2px solid rgba(255,255,255,.3); box-shadow:0 4px 12px rgba(0,0,0,.25); }
+.Nav--flex ul li:hover > .subnav { display:block; }
+.subnav ul { flex-direction:column; }
+.subnav ul li > a { padding:9px 16px; font-size:13px; border-bottom:1px solid rgba(255,255,255,.08); white-space:normal; }
+.Header-right { display:flex; align-items:flex-end; gap:16px; padding-bottom:8px; }
+.NavSearch-wrapper { display:flex; align-items:flex-end; gap:20px; }
+.Search { display:flex; }
+.Search input { padding:6px 12px; border:none; border-radius:3px 0 0 3px; font-size:13px; width:200px; outline:none; }
+.Search button { background:#f9a825; color:#fff; border:none; padding:6px 14px; border-radius:0 3px 3px 0; cursor:pointer; font-size:12px; font-weight:bold; }
+
+/* BREADCRUMB */
+.Breadcrumb { background:#e8f4fc; border-bottom:1px solid #c5dff0; padding:8px 0; font-size:12px; color:#555; }
+.Breadcrumb a { color:#095399; }
+
+/* FOOTER */
+footer { margin-top:auto; }
+.Feedback { background:#f0f0f0; border-top:1px solid #ddd; padding:10px 0; font-size:13px; color:#555; }
+.Feedback a { color:#095399; margin-left:6px; }
+.Footer { background:#013E89; color:#ccc; }
+.Footer-body { padding:30px 0 20px; }
+.Grid { display:flex; flex-wrap:wrap; margin:0 -10px; }
+.Grid-item { padding:0 10px; }
+.u-1of3 { width:33.3333%; } .u-2of3 { width:66.6666%; }
+.Footer-title { color:#fff; font-size:14px; font-weight:bold; margin-bottom:14px; }
+.Footer-info p { font-size:12px; color:#aac8e0; margin-bottom:6px; line-height:1.5; }
+.Footer-info p span { color:#fff; font-weight:bold; }
+.Footer-info a { color:#aac8e0; font-size:12px; }
+.Footer-social ul { display:flex; gap:10px; margin-top:14px; }
+.Footer-social a { display:inline-block; width:30px; height:30px; background:rgba(255,255,255,.15); border-radius:50%; text-align:center; line-height:30px; color:#fff; font-size:13px; }
+.Footer-list { margin-bottom:16px; }
+.Footer-list h3 { color:#fff; font-size:13px; font-weight:bold; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,.15); padding-bottom:6px; }
+.Footer-list ul { flex-direction:column; gap:6px; display:flex; }
+.Footer-list ul li a { color:#aac8e0; font-size:12px; }
+.Footer-list ul li a:hover { color:#fff; }
+.Footer-logos { margin-top:16px; }
+.Footer-logos img { height:36px; opacity:.85; }
+.Footer-bottom { background:#002569; padding:12px 0; }
+.Footer-bottom .Container { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+.Footer-links ul { display:flex; flex-wrap:wrap; }
+.Footer-links li { font-size:11px; color:#7aa5c0; }
+.Footer-links li::after { content:" | "; color:#4a6a8a; padding:0 4px; }
+.Footer-links li:last-child::after { content:""; }
+.Footer-links li a { color:#7aa5c0; font-size:11px; }
+.u-sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); }
+
+/* APP */
+.app-intro { background:#fff; border:1px solid #ddd; border-left:4px solid #095399; border-radius:3px; padding:18px 22px; margin-bottom:20px; }
+.app-intro h2 { font-size:20px; color:#095399; margin-bottom:6px; }
+.app-intro p { color:#555; font-size:13px; line-height:1.6; }
+.app-panel { background:#fff; border:1px solid #ddd; border-radius:3px; padding:14px 18px; margin-bottom:16px; display:flex; align-items:flex-start; gap:12px; flex-wrap:wrap; }
+.app-panel--warn { border-left:4px solid #f9a825; background:#fffbf0; }
+.app-panel label { font-weight:bold; font-size:13px; white-space:nowrap; margin:0; padding-top:7px; }
+.app-panel input { flex:1; min-width:260px; padding:7px 10px; border:1px solid #ccc; border-radius:3px; font-size:13px; }
+.app-panel input:focus { outline:2px solid #095399; border-color:#095399; }
+.app-panel--warn input { border-color:#ffb300; }
+.hint { font-size:11px; color:#777; width:100%; margin-top:4px; }
+.hint code { background:#eee; padding:1px 4px; border-radius:2px; font-size:11px; }
+.status-ok { color:#2e7d32; font-size:12px; }
+.status-err { color:#c62828; font-size:12px; }
+
+/* BUTTONS */
+.btn { border:none; border-radius:3px; cursor:pointer; font-size:13px; font-weight:bold; padding:7px 18px; white-space:nowrap; transition:background .15s; }
+.btn:disabled { background:#aaa!important; cursor:not-allowed; color:#fff!important; }
+.btn--blue { background:#095399; color:#fff; } .btn--blue:hover { background:#013E89; }
+.btn--green { background:#2e7d32; color:#fff; font-size:12px; padding:6px 14px; } .btn--green:hover { background:#1b5e20; }
+.btn--green-done { background:#1b5e20!important; }
+.btn--dl { background:#095399; color:#fff; font-size:12px; padding:7px 16px; display:inline-block; margin-top:10px; } .btn--dl:hover { background:#013E89; }
+
+/* ══════ DEBUG PANEL ══════ */
+.debug-toggle-bar {
+  background:#fff; border:1px solid #ddd; border-radius:3px;
+  padding:10px 16px; margin-bottom:16px;
+  display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+}
+.debug-toggle-bar label { font-size:13px; font-weight:bold; color:#37474f; }
+
+/* Toggle switch */
+.toggle-wrap { display:flex; align-items:center; gap:8px; cursor:pointer; }
+.toggle-wrap input[type=checkbox] { display:none; }
+.toggle-track {
+  width:42px; height:22px; background:#ccc; border-radius:11px;
+  position:relative; transition:background .2s; flex-shrink:0; cursor:pointer;
+}
+.toggle-track::after {
+  content:''; position:absolute; top:3px; left:3px;
+  width:16px; height:16px; background:#fff; border-radius:50%;
+  transition:left .2s; box-shadow:0 1px 3px rgba(0,0,0,.3);
+}
+input:checked + .toggle-track { background:#1565c0; }
+input:checked + .toggle-track::after { left:23px; }
+.toggle-label { font-size:13px; color:#555; }
+.debug-badge {
+  background:#ef5350; color:#fff; font-size:10px; font-weight:bold;
+  padding:2px 7px; border-radius:10px; display:none;
+}
+.debug-badge.visible { display:inline-block; }
+
+.debug-panel {
+  display:none;
+  background:#0d1117; border:1px solid #30363d;
+  border-radius:3px; margin-bottom:16px; overflow:hidden;
+  font-family:'Courier New', monospace; font-size:12px;
+}
+.debug-panel.open { display:block; }
+.debug-toolbar {
+  background:#161b22; border-bottom:1px solid #30363d;
+  padding:8px 14px; display:flex; justify-content:space-between; align-items:center;
+}
+.debug-toolbar-left { display:flex; align-items:center; gap:10px; }
+.debug-toolbar-left span { color:#58a6ff; font-weight:bold; font-size:12px; }
+.debug-count { background:#21262d; color:#8b949e; font-size:11px; padding:2px 7px; border-radius:10px; }
+.btn-clear { background:#21262d; color:#8b949e; border:1px solid #30363d; border-radius:3px; padding:3px 10px; cursor:pointer; font-size:11px; }
+.btn-clear:hover { background:#30363d; color:#e6edf3; }
+.btn-filter { background:transparent; border:1px solid #30363d; border-radius:3px; padding:3px 8px; cursor:pointer; font-size:11px; color:#8b949e; }
+.btn-filter:hover { background:#21262d; }
+.btn-filter.active-filter { background:#1f6feb; border-color:#1f6feb; color:#fff; }
+
+.debug-log {
+  max-height:420px; overflow-y:auto; padding:0;
+  scrollbar-width:thin; scrollbar-color:#30363d #0d1117;
+}
+.debug-log::-webkit-scrollbar { width:6px; }
+.debug-log::-webkit-scrollbar-track { background:#0d1117; }
+.debug-log::-webkit-scrollbar-thumb { background:#30363d; border-radius:3px; }
+
+.log-empty { color:#484f58; text-align:center; padding:30px; font-size:12px; }
+
+.log-entry { border-bottom:1px solid #21262d; }
+.log-entry:last-child { border-bottom:none; }
+
+.log-summary {
+  display:flex; align-items:flex-start; gap:10px;
+  padding:8px 14px; cursor:pointer; user-select:none;
+}
+.log-summary:hover { background:#161b22; }
+.log-arrow { color:#484f58; font-size:10px; transition:transform .15s; flex-shrink:0; margin-top:2px; }
+.log-entry.expanded .log-arrow { transform:rotate(90deg); }
+.log-time { color:#484f58; font-size:10px; flex-shrink:0; margin-top:2px; white-space:nowrap; }
+.log-method { font-weight:bold; font-size:11px; padding:1px 6px; border-radius:3px; flex-shrink:0; }
+.log-method.GET  { background:#1f6feb22; color:#58a6ff; border:1px solid #1f6feb44; }
+.log-method.POST { background:#a371f722; color:#a371f7; border:1px solid #a371f744; }
+.log-endpoint { color:#e6edf3; font-size:12px; flex:1; word-break:break-all; }
+.log-status { flex-shrink:0; font-size:11px; font-weight:bold; padding:1px 7px; border-radius:3px; }
+.log-status.ok   { background:#23863622; color:#3fb950; border:1px solid #23863644; }
+.log-status.err  { background:#da363633; color:#f85149; border:1px solid #da363644; }
+.log-status.pend { background:#bb800922; color:#d29922; border:1px solid #bb800944; }
+.log-duration { color:#484f58; font-size:10px; flex-shrink:0; white-space:nowrap; }
+
+.log-detail { display:none; border-top:1px solid #21262d; }
+.log-entry.expanded .log-detail { display:block; }
+.log-detail-section { padding:10px 14px; border-bottom:1px solid #21262d; }
+.log-detail-section:last-child { border-bottom:none; }
+.log-detail-title { color:#8b949e; font-size:10px; text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; font-weight:bold; }
+.log-detail-pre {
+  background:#161b22; color:#c9d1d9; font-size:11px;
+  padding:8px 10px; border-radius:3px; overflow-x:auto;
+  max-height:200px; overflow-y:auto; white-space:pre-wrap; word-break:break-all;
+  border:1px solid #30363d;
+}
+.log-detail-pre.ok-color   { color:#3fb950; }
+.log-detail-pre.err-color  { color:#f85149; }
+.log-detail-kv { font-size:11px; }
+.log-detail-kv span.k { color:#79c0ff; } 
+.log-detail-kv span.v { color:#e6edf3; }
+
+/* TABS */
+.tabs-wrap { background:#fff; border:1px solid #ddd; border-radius:3px; margin-bottom:24px; }
+.tabs-nav { display:flex; flex-wrap:wrap; border-bottom:2px solid #095399; background:#f0f6fc; border-radius:3px 3px 0 0; }
+.tab-btn { padding:10px 20px; border:none; background:transparent; cursor:pointer; font-size:13px; font-weight:bold; color:#555; border-right:1px solid #ddd; }
+.tab-btn:hover { background:#d6eaf8; color:#095399; }
+.tab-btn.active { background:#fff; color:#095399; border-bottom:2px solid #fff; margin-bottom:-2px; }
+.tab-panel { display:none; padding:22px; }
+.tab-panel.active { display:block; }
+.sec-title { font-size:16px; color:#095399; font-weight:bold; margin-bottom:16px; }
+.ds-summary { background:#f0f6fc; border:1px solid #c5dff0; border-radius:3px; padding:10px 14px; margin-bottom:16px; font-size:12px; color:#333; display:flex; gap:16px; flex-wrap:wrap; }
+.ds-summary strong { color:#095399; }
+
+/* META BLOCKS */
+.meta-block { background:#f9f9f9; border:1px solid #e0e0e0; border-radius:3px; margin-bottom:18px; }
+.meta-block-hdr { background:#e8f4fc; padding:9px 14px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #c5dff0; }
+.meta-block-hdr h4 { font-size:13px; color:#095399; font-weight:bold; margin:0; }
+.meta-block-body { padding:14px 16px; }
+.val-lbl { font-size:11px; color:#888; margin-bottom:4px; }
+.val-cur { font-size:13px; color:#333; line-height:1.6; background:#fff; border:1px solid #e0e0e0; border-radius:3px; padding:9px 12px; margin-bottom:10px; }
+.tags-row { display:flex; flex-wrap:wrap; gap:6px; }
+.tag { background:#e8f4fc; color:#095399; border:1px solid #90caf9; border-radius:12px; padding:2px 10px; font-size:12px; }
+.tag-s { background:#f3e5f5; color:#6a1b9a; border:1px solid #ce93d8; border-radius:12px; padding:2px 10px; font-size:12px; }
+.sugg-lbl { font-size:12px; font-weight:bold; color:#6a1b9a; margin-bottom:6px; }
+.sugg-lbl::before { content:"✦ "; }
+.val-sugg { font-size:13px; color:#4a148c; line-height:1.6; background:#f3e5f5; border:1px solid #ce93d8; border-radius:3px; padding:9px 12px; }
+.apply-row { margin-top:10px; text-align:right; }
+
+/* RESOURCE CARDS */
+.res-card { background:#fff; border:1px solid #ddd; border-radius:3px; margin-bottom:16px; }
+.res-card-hdr { background:#e3f2fd; padding:8px 14px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #bbdefb; }
+.res-card-hdr h4 { font-size:13px; color:#0d47a1; font-weight:bold; margin:0; word-break:break-word; }
+.fmt-badge { background:#1565c0; color:#fff; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:10px; white-space:nowrap; }
+.res-card-body { padding:12px 14px; }
+
+/* JSON TAB */
+.json-block { background:#fff; border:1px solid #ddd; border-radius:3px; padding:18px; margin-bottom:18px; }
+.not-found { background:#fff3e0; border:1px solid #ffe0b2; border-radius:3px; padding:14px 18px; color:#e65100; font-size:13px; display:flex; align-items:flex-start; gap:10px; }
+.cols-2 { display:flex; gap:14px; flex-wrap:wrap; }
+.cols-2 > div { flex:1; min-width:220px; }
+pre.jp  { background:#263238; color:#aed581; font-size:12px; line-height:1.5; padding:12px; border-radius:3px; overflow:auto; max-height:300px; }
+pre.jps { background:#3e0053; color:#e1bee7; font-size:12px; line-height:1.5; padding:12px; border-radius:3px; overflow:auto; max-height:300px; }
+
+/* STATES */
+.loading { text-align:center; padding:28px; color:#666; font-size:13px; }
+.spin { display:inline-block; width:16px; height:16px; border:3px solid #ccc; border-top-color:#095399; border-radius:50%; animation:spin .8s linear infinite; vertical-align:middle; margin-right:8px; }
+.ai-gen { display:flex; align-items:center; gap:8px; color:#6a1b9a; font-size:12px; margin:8px 0; }
+.ai-spin { display:inline-block; width:13px; height:13px; border:2px solid #ce93d8; border-top-color:#6a1b9a; border-radius:50%; animation:spin .8s linear infinite; flex-shrink:0; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.msg-err { background:#ffebee; border:1px solid #ef9a9a; border-radius:3px; padding:10px 14px; color:#c62828; font-size:13px; }
+.empty { text-align:center; padding:28px; color:#888; font-size:13px; }
+
+@media(max-width:768px){
+  .u-1of3,.u-2of3{width:100%;}
+  .Header-body .Container{flex-direction:column;gap:12px;}
+  .Header-right{flex-direction:column;align-items:flex-start;}
+  .Nav--flex ul{flex-direction:column;}
+  .subnav{position:static;}
+  .Footer-bottom .Container{flex-direction:column;}
+}
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════ HEADER ═══════════════════ -->
+<header class="Header">
+  <div class="Header-top">
+    <div class="Container">
+      <a href="http://datos.gub.uy/"><span class="Brand-text">gub.uy</span></a>
+      <a href="https://test.catalogodatos.gub.uy/user/login">
+        <span class="u-sr">Usuario</span><span class="Icon--user"></span>
+      </a>
+    </div>
+  </div>
+  <div class="Header-body">
+    <div class="Container">
+      <a href="https://test.catalogodatos.gub.uy/">
+        <h1 class="Logo-title"><span class="Logo-role">Catálogo de</span><span>Datos Abiertos</span></h1>
+      </a>
+      <div class="Header-right">
+        <div class="NavSearch-wrapper">
+          <nav class="Nav--flex">
+            <ul>
+              <li><a href="https://test.catalogodatos.gub.uy/dataset/">Conjuntos de Datos</a></li>
+              <li><a href="https://test.catalogodatos.gub.uy/organization/">Organizaciones</a></li>
+              <li><a href="https://test.catalogodatos.gub.uy/group/">Categorias</a></li>
+              <li><a href="https://test.catalogodatos.gub.uy/showcase/">Aplicaciones y uso de datos</a></li>
+              <li>
+                <a href="#">Sobre el Catálogo ▾</a>
+                <div class="subnav"><ul>
+                  <li><a href="https://test.catalogodatos.gub.uy/about">Acerca de</a></li>
+                  <li><a href="https://test.catalogodatos.gub.uy/agesic/portal/estadisticas">Panel de estadísticas</a></li>
+                  <li><a href="https://test.catalogodatos.gub.uy/agesic/portal/faq">Preguntas frecuentes</a></li>
+                  <li><a href="https://test.catalogodatos.gub.uy/agesic/portal/feedback">Ayúdanos a mejorar</a></li>
+                  <li><a href="https://www.gub.uy/contacto" target="_blank">Contacto</a></li>
+                </ul></div>
+              </li>
+            </ul>
+          </nav>
+          <div style="padding-bottom:10px;">
+            <div class="Search">
+              <input type="search" id="hdr-q" placeholder="Buscar en el Catálogo">
+              <button onclick="window.open('https://test.catalogodatos.gub.uy/dataset/?q='+encodeURIComponent(document.getElementById('hdr-q').value),'_blank')">Buscar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="Breadcrumb">
+  <div class="Container">
+    <a href="https://test.catalogodatos.gub.uy/">Inicio</a> &rsaquo; <strong>Asistente de Metadatos</strong>
+  </div>
+</div>
+
+<!-- ═══════════════════ MAIN ═══════════════════ -->
+<main>
+<div class="Container" style="padding-top:22px;padding-bottom:40px;">
+
+  <div class="app-intro">
+    <h2>Asistente de Metadatos con Inteligencia Artificial</h2>
+    <p>Analizá y mejorá los metadatos de tus conjuntos de datos usando IA. Ingresá tu clave de API y el <strong>ID único</strong> del conjunto de datos (UUID o nombre-slug).</p>
+  </div>
+
+  <!-- API KEY -->
+  <div class="app-panel app-panel--warn">
+    <label for="apiKey">🔑 Clave de API CKAN:</label>
+    <input type="password" id="apiKey" placeholder="Ej: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off"/>
+    <button class="btn btn--blue" onclick="saveKey()">Guardar</button>
+    <span id="keyStatus"></span>
+    <p class="hint">Tu clave de API está en el Catálogo → tu perfil de usuario → sección <em>API Key</em>.</p>
+  </div>
+
+  <!-- DATASET ID -->
+  <div class="app-panel">
+    <label for="dsId">🗂 ID del dataset:</label>
+    <input type="text" id="dsId" placeholder="UUID o nombre-slug — ej: encuestas-de-hogares"/>
+    <button class="btn btn--blue" onclick="loadDataset()">Analizar</button>
+    <p class="hint">Usá el UUID o el nombre que aparece en la URL del dataset. Ej: <code>encuestas-de-hogares</code> o <code>a3f1b2c4-…</code></p>
+  </div>
+
+  <!-- ═══ DEBUG TOGGLE ═══ -->
+  <div class="debug-toggle-bar">
+    <label>🔍 Modo debug</label>
+    <label class="toggle-wrap">
+      <input type="checkbox" id="debugToggle" onchange="toggleDebug(this.checked)">
+      <span class="toggle-track"></span>
+      <span class="toggle-label">Mostrar log de llamadas a la API</span>
+    </label>
+    <span class="debug-badge" id="debugBadge">0 llamadas</span>
+    <button class="btn" style="background:#546e7a;color:#fff;font-size:11px;padding:5px 12px;" onclick="copyLog()">📋 Copiar log</button>
+  </div>
+
+  <!-- ═══ DEBUG PANEL ═══ -->
+  <div class="debug-panel" id="debugPanel">
+    <div class="debug-toolbar">
+      <div class="debug-toolbar-left">
+        <span>🖥 API Call Log</span>
+        <span class="debug-count" id="debugCount">0 entradas</span>
+        <button class="btn-filter active-filter" id="f-all"  onclick="setFilter('all')">Todas</button>
+        <button class="btn-filter" id="f-ok"   onclick="setFilter('ok')">✓ OK</button>
+        <button class="btn-filter" id="f-err"  onclick="setFilter('err')">✗ Error</button>
+      </div>
+      <button class="btn-clear" onclick="clearLog()">Limpiar</button>
+    </div>
+    <div class="debug-log" id="debugLog">
+      <div class="log-empty">Aún no se realizaron llamadas a la API.</div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs-wrap" id="mainTabs" style="display:none;">
+    <div class="tabs-nav">
+      <button class="tab-btn active" onclick="switchTab('t-meta',this)">📋 Metadatos</button>
+      <button class="tab-btn" onclick="switchTab('t-res',this)">📁 Recursos</button>
+      <button class="tab-btn" onclick="switchTab('t-json',this)">🗂 Metadatos JSON</button>
+    </div>
+    <div class="tab-panel active" id="t-meta"><div id="meta-c" class="empty">Cargando...</div></div>
+    <div class="tab-panel"        id="t-res" ><div id="res-c"  class="empty">Cargando...</div></div>
+    <div class="tab-panel"        id="t-json"><div id="json-c" class="empty">Cargando...</div></div>
+  </div>
+
+</div>
+</main>
+
+<!-- ═══════════════════ FOOTER ═══════════════════ -->
+<footer>
+  <div class="Feedback">
+    <div class="Container">
+      Si encontraste algún error en este sitio:
+      <a href="https://test.catalogodatos.gub.uy/agesic/portal/feedback">ayúdanos a mejorarlo</a>
+    </div>
+  </div>
+  <div class="Footer">
+    <div class="Footer-body">
+      <div class="Container">
+        <div class="Grid">
+          <div class="Grid-item u-1of3">
+            <h3 class="Footer-title">Catálogo de Datos Abiertos</h3>
+            <address class="Footer-info">
+              <p><span>Dirección:</span> Liniers 1324 piso 4</p>
+              <p><span>Teléfono:</span> (+598) 2901 2929</p>
+              <p><span>Horario:</span> Lunes a viernes 9:30–17:30 hs.</p>
+              <p><span>Correo:</span> datosabiertos@agesic.gub.uy</p>
+            </address>
+            <div class="Footer-social"><ul>
+              <li><a href="https://web.facebook.com/agesic.uy" target="_blank">f</a></li>
+              <li><a href="https://twitter.com/agesic" target="_blank">t</a></li>
+              <li><a href="https://www.youtube.com/user/AGESIC" target="_blank">▶</a></li>
+            </ul></div>
+          </div>
+          <div class="Grid-item u-2of3">
+            <div class="Grid">
+              <div class="Grid-item u-1of3">
+                <div class="Footer-list"><h3>Sobre el Catálogo</h3><ul>
+                  <li><a href="https://test.catalogodatos.gub.uy/about">Acerca de</a></li>
+                  <li><a href="https://test.catalogodatos.gub.uy/agesic/portal/feedback">Ayúdanos a mejorar</a></li>
+                  <li><a href="https://www.gub.uy/contacto" target="_blank">Contacto</a></li>
+                </ul></div>
+              </div>
+              <div class="Grid-item u-1of3">
+                <div class="Footer-list"><h3>Acceso</h3><ul>
+                  <li><a href="https://test.catalogodatos.gub.uy/dataset/">Conjuntos de Datos</a></li>
+                  <li><a href="https://test.catalogodatos.gub.uy/organization/">Organizaciones</a></li>
+                  <li><a href="https://test.catalogodatos.gub.uy/group/">Categorias</a></li>
+                  <li><a href="https://test.catalogodatos.gub.uy/showcase">Aplicaciones</a></li>
+                </ul></div>
+              </div>
+              <div class="Grid-item u-1of3">
+                <div class="Footer-list"><h3>Recursos</h3><ul>
+                  <li><a href="https://test.catalogodatos.gub.uy/agesic/portal/estadisticas">Panel de estadísticas</a></li>
+                  <li><a href="https://test.catalogodatos.gub.uy/agesic/portal/faq">Preguntas frecuentes</a></li>
+                </ul></div>
+              </div>
+            </div>
+            <div class="Footer-logos">
+              <a href="https://agesic.gub.uy" target="_blank">
+                <img src="https://test.catalogodatos.gub.uy/images/logo-agesic-blanco.png" alt="Agesic" onerror="this.style.display='none'">
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="Footer-bottom">
+      <div class="Container">
+        <span style="color:#fff;font-weight:bold;font-size:13px;">gub.uy</span>
+        <div class="Footer-links"><ul>
+          <li>Sitio oficial de la República Oriental del Uruguay</li>
+          <li><a href="https://www.gub.uy/politica-de-privacidad" target="_blank">Política de privacidad</a></li>
+          <li><a href="https://test.catalogodatos.gub.uy/agesic/portal/accesibilidad">Accesibilidad</a></li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+'use strict';
+
+/* ─── Configuración ──────────────────────────────────── */
+const CKAN_BASE   = 'https://test.catalogodatos.gub.uy';
+const CLAUDE_MDL  = 'claude-sonnet-4-20250514';
+
+/* ─── Estado ─────────────────────────────────────────── */
+const S = { apiKey:'', dataset:null, sugg:{}, resSugg:{}, jsonAn:{} };
+
+/* ─── Utilidades ─────────────────────────────────────── */
+const $   = id => document.getElementById(id);
+const esc = s  => String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+const spinHtml = () => `<div class="loading"><span class="spin"></span>Cargando datos del catálogo...</div>`;
+const aiHtml   = () => `<div class="ai-gen"><span class="ai-spin"></span>Generando sugerencia con IA...</div>`;
+const errHtml  = m  => `<div class="msg-err">${esc(m)}</div>`;
+
+/* ═══════════════════════════════════════════════════════
+   DEBUG ENGINE
+   ═══════════════════════════════════════════════════════ */
+let debugEnabled  = false;
+let debugFilter   = 'all';
+let debugEntries  = [];   // { id, ts, method, url, endpoint, reqHeaders, reqBody, status, resBody, duration, state }
+
+function toggleDebug(on) {
+  debugEnabled = on;
+  $('debugPanel').classList.toggle('open', on);
+  $('debugBadge').classList.toggle('visible', on);
+}
+
+function setFilter(f) {
+  debugFilter = f;
+  ['all','ok','err'].forEach(x => $('f-'+x).classList.toggle('active-filter', x===f));
+  renderLog();
+}
+
+function clearLog() {
+  debugEntries = [];
+  renderLog();
+  updateBadge();
+}
+
+function updateBadge() {
+  const n = debugEntries.length;
+  $('debugBadge').textContent = n + ' llamada' + (n===1?'':'s');
+  $('debugCount').textContent = n + ' entrada' + (n===1?'':'s');
+}
+
+function dbLog(entry) {
+  debugEntries.unshift(entry);  // más reciente primero
+  updateBadge();
+  if (debugEnabled) renderLog();
+}
+
+function renderLog() {
+  const log = $('debugLog');
+  const filtered = debugFilter === 'all'
+    ? debugEntries
+    : debugEntries.filter(e => debugFilter === 'ok' ? e.state === 'ok' : e.state === 'err');
+
+  if (!filtered.length) {
+    log.innerHTML = `<div class="log-empty">${debugEntries.length ? 'Sin entradas para el filtro seleccionado.' : 'Aún no se realizaron llamadas a la API.'}</div>`;
+    return;
+  }
+
+  log.innerHTML = filtered.map(e => {
+    const stClass  = e.state === 'ok' ? 'ok' : e.state === 'err' ? 'err' : 'pend';
+    const stLabel  = e.state === 'ok' ? `${e.status} OK` : e.state === 'err' ? `${e.status||'ERR'}` : '…';
+    const dur      = e.duration ? `${e.duration}ms` : '';
+
+    // Construir bloques de detalle
+    let details = '';
+
+    // URL completa
+    details += `<div class="log-detail-section">
+      <div class="log-detail-title">URL completa</div>
+      <div class="log-detail-pre">${esc(e.url)}</div>
+    </div>`;
+
+    // Headers enviados
+    if (e.reqHeaders && Object.keys(e.reqHeaders).length) {
+      const hLines = Object.entries(e.reqHeaders).map(([k,v]) =>
+        `<span class="k">${esc(k)}</span>: <span class="v">${esc(k.toLowerCase().includes('key') || k.toLowerCase().includes('auth') ? '●●●●●●●●' : v)}</span>`
+      ).join('\n');
+      details += `<div class="log-detail-section">
+        <div class="log-detail-title">Headers enviados</div>
+        <div class="log-detail-pre log-detail-kv">${hLines}</div>
+      </div>`;
+    }
+
+    // Body de la request (POST)
+    if (e.reqBody) {
+      details += `<div class="log-detail-section">
+        <div class="log-detail-title">Request body</div>
+        <div class="log-detail-pre">${esc(prettyJson(e.reqBody))}</div>
+      </div>`;
+    }
+
+    // Respuesta
+    const resClass = e.state === 'ok' ? 'ok-color' : e.state === 'err' ? 'err-color' : '';
+    details += `<div class="log-detail-section">
+      <div class="log-detail-title">Respuesta ${e.status ? '(HTTP '+e.status+')' : ''}</div>
+      <div class="log-detail-pre ${resClass}">${esc(e.resBody ? prettyJson(e.resBody) : e.errMsg || '(sin respuesta)')}</div>
+    </div>`;
+
+    return `<div class="log-entry" id="le-${e.id}">
+      <div class="log-summary" onclick="toggleEntry('${e.id}')">
+        <span class="log-arrow">▶</span>
+        <span class="log-time">${esc(e.ts)}</span>
+        <span class="log-method ${e.method}">${esc(e.method)}</span>
+        <span class="log-endpoint">${esc(e.endpoint)}</span>
+        <span class="log-status ${stClass}">${stLabel}</span>
+        <span class="log-duration">${dur}</span>
+      </div>
+      <div class="log-detail">${details}</div>
+    </div>`;
+  }).join('');
+}
+
+function toggleEntry(id) {
+  const el = $('le-'+id);
+  if (el) el.classList.toggle('expanded');
+}
+
+function prettyJson(val) {
+  if (typeof val === 'string') {
+    try { return JSON.stringify(JSON.parse(val), null, 2); } catch { return val; }
+  }
+  try { return JSON.stringify(val, null, 2); } catch { return String(val); }
+}
+
+function copyLog() {
+  const lines = debugEntries.map(e =>
+    `[${e.ts}] ${e.method} ${e.url}\n` +
+    `Status: ${e.status||'?'} | Duration: ${e.duration||'?'}ms | State: ${e.state}\n` +
+    (e.errMsg ? `Error: ${e.errMsg}\n` : '') +
+    (e.resBody ? `Response: ${prettyJson(e.resBody).substring(0,500)}\n` : '') +
+    '─'.repeat(60)
+  ).join('\n');
+  navigator.clipboard.writeText(lines).then(
+    () => alert('Log copiado al portapapeles.'),
+    () => alert('No se pudo copiar. Usá el panel visual.')
+  );
+}
+
+/* ─── CKAN fetch con logging ─────────────────────────── */
+let _reqCounter = 0;
+
+async function ckanFetch(method, endpoint, params, body) {
+  const id    = ++_reqCounter;
+  const ts    = new Date().toLocaleTimeString('es-UY', {hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit',fractionalSecondDigits:2});
+  const qs    = params ? '?' + new URLSearchParams(params).toString() : '';
+  const url   = `${CKAN_BASE}/api/3/action/${endpoint}${qs}`;
+
+  const headers = { 'Content-Type': 'application/json' };
+  if (S.apiKey) headers['X-CKAN-API-Key'] = S.apiKey;
+
+  const entry = {
+    id, ts, method, endpoint, url,
+    reqHeaders : headers,
+    reqBody    : body || null,
+    status     : null,
+    resBody    : null,
+    errMsg     : null,
+    duration   : null,
+    state      : 'pend'
+  };
+
+  // Log inmediato como pendiente
+  dbLog(entry);
+
+  const t0 = performance.now();
+  try {
+    const opts  = { method, headers };
+    if (body) opts.body = JSON.stringify(body);
+
+    const resp  = await fetch(url, opts);
+    entry.duration = Math.round(performance.now() - t0);
+    entry.status   = resp.status;
+
+    let data;
+    try { data = await resp.json(); } catch(e) {
+      entry.state  = 'err';
+      entry.errMsg = `No se pudo parsear la respuesta como JSON: ${e.message}`;
+      renderLog();
+      throw new Error(entry.errMsg);
+    }
+
+    entry.resBody = data;
+
+    if (!data.success) {
+      entry.state  = 'err';
+      const et = data.error?.__type || '';
+      const em = data.error?.message || JSON.stringify(data.error || data);
+      entry.errMsg = em;
+      renderLog();
+
+      if (et === 'Not Found Error' || resp.status === 404)
+        throw new Error(`No se encontró el recurso. Verificá el ID ingresado.\nDetalle: ${em}`);
+      if (resp.status === 403 || et === 'Authorization Error')
+        throw new Error(`Sin autorización. Verificá tu clave de API.\nDetalle: ${em}`);
+      throw new Error(em);
+    }
+
+    entry.state = 'ok';
+    renderLog();
+    return data.result;
+
+  } catch(e) {
+    if (entry.state === 'pend') {
+      entry.state    = 'err';
+      entry.duration = Math.round(performance.now() - t0);
+      entry.errMsg   = e.message;
+      // Si es Failed to fetch dar pista útil
+      if (e.message.includes('Failed to fetch') || e.message.includes('NetworkError')) {
+        entry.errMsg = `Failed to fetch — posibles causas:\n` +
+          `• El catálogo bloqueó la petición por CORS (origen no permitido)\n` +
+          `• No hay conectividad con ${CKAN_BASE}\n` +
+          `• La URL del API está mal formada\n` +
+          `URL intentada: ${url}`;
+      }
+      renderLog();
+      throw new Error(entry.errMsg);
+    }
+    throw e;
+  }
+}
+
+const ckanGet  = (ep, p)    => ckanFetch('GET',  ep, p, null);
+const ckanPost = (ep, body) => ckanFetch('POST', ep, null, body);
+
+/* ─── API KEY ─────────────────────────────────────────── */
+function saveKey() {
+  const v = $('apiKey').value.trim();
+  const s = $('keyStatus');
+  if (!v) { s.innerHTML = '<span class="status-err">⚠ Ingresá una clave válida.</span>'; return; }
+  S.apiKey = v;
+  s.innerHTML = '<span class="status-ok">✓ Clave guardada en sesión.</span>';
+}
+
+/* ─── Tabs ────────────────────────────────────────────── */
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  $(id).classList.add('active'); btn.classList.add('active');
+}
+
+/* ═══════════════════════════════════════════════════════
+   CARGA PRINCIPAL
+   ═══════════════════════════════════════════════════════ */
+async function loadDataset() {
+  const rawId = $('dsId').value.trim();
+  if (!rawId) { alert('Ingresá el ID del conjunto de datos.'); return; }
+
+  S.dataset = null; S.sugg = {}; S.resSugg = {}; S.jsonAn = {};
+
+  $('mainTabs').style.display = 'block';
+  ['meta-c','res-c','json-c'].forEach(id => $(id).innerHTML = spinHtml());
+
+  // Si debug está off, activarlo automáticamente para que el usuario vea el problema
+  if (!debugEnabled) {
+    $('debugToggle').checked = true;
+    toggleDebug(true);
+  }
+
+  try {
+    S.dataset = await ckanGet('package_show', { id: rawId });
+    renderMeta();
+    renderResources();
+    renderJsonTab();
+  } catch(e) {
+    const h = errHtml(e.message);
+    ['meta-c','res-c','json-c'].forEach(id => $(id).innerHTML = h);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   CLAUDE
+   ═══════════════════════════════════════════════════════ */
+const SYS = `Sos un experto en gestión de datos abiertos y metadatos para portales CKAN del gobierno uruguayo.
+Mejorá los metadatos para que sean más claros, precisos y útiles. Respondé siempre en español rioplatense. Sé conciso y profesional.`;
+
+async function claude(user) {
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ model:CLAUDE_MDL, max_tokens:1200, system:SYS, messages:[{role:'user',content:user}] })
+  });
+  const d = await r.json();
+  if (d.error) throw new Error(d.error.message);
+  return d.content.map(b=>b.text||'').join('\n');
+}
+
+/* ═══════════════════════════════════════════════════════
+   TAB 1 — METADATOS
+   ═══════════════════════════════════════════════════════ */
+function renderMeta() {
+  const ds   = S.dataset;
+  const tags = (ds.tags||[]).map(t=>t.display_name||t.name);
+  $('meta-c').innerHTML = `
+    <p class="sec-title">Metadatos del conjunto de datos</p>
+    <div class="ds-summary">
+      <span><strong>ID:</strong> ${esc(ds.id)}</span>
+      <span><strong>Nombre:</strong> ${esc(ds.name)}</span>
+      <span><strong>Organización:</strong> ${esc(ds.organization?.title||'—')}</span>
+      <span><strong>Estado:</strong> ${esc(ds.state||'—')}</span>
+    </div>
+
+    <div class="meta-block">
+      <div class="meta-block-hdr"><h4>Título</h4>
+        <button class="btn btn--green" id="bt-title" onclick="applyField('title')" disabled>✔ Aplicar sugerencia</button></div>
+      <div class="meta-block-body">
+        <div class="val-lbl">Valor actual:</div>
+        <div class="val-cur" id="cv-title">${esc(ds.title||'(sin título)')}</div>
+        <div id="sv-title">${aiHtml()}</div>
+      </div>
+    </div>
+
+    <div class="meta-block">
+      <div class="meta-block-hdr"><h4>Descripción</h4>
+        <button class="btn btn--green" id="bt-notes" onclick="applyField('notes')" disabled>✔ Aplicar sugerencia</button></div>
+      <div class="meta-block-body">
+        <div class="val-lbl">Valor actual:</div>
+        <div class="val-cur" id="cv-notes">${esc(ds.notes||'(sin descripción)')}</div>
+        <div id="sv-notes">${aiHtml()}</div>
+      </div>
+    </div>
+
+    <div class="meta-block">
+      <div class="meta-block-hdr"><h4>Etiquetas</h4>
+        <button class="btn btn--green" id="bt-tags" onclick="applyField('tags')" disabled>✔ Aplicar sugerencia</button></div>
+      <div class="meta-block-body">
+        <div class="val-lbl">Valor actual:</div>
+        <div class="val-cur"><div class="tags-row" id="cv-tags">
+          ${tags.length ? tags.map(t=>`<span class="tag">${esc(t)}</span>`).join('') : '<span style="color:#888">Sin etiquetas</span>'}
+        </div></div>
+        <div id="sv-tags">${aiHtml()}</div>
+      </div>
+    </div>`;
+  genMetaSugg();
+}
+
+async function genMetaSugg() {
+  const ds   = S.dataset;
+  const tags = (ds.tags||[]).map(t=>t.display_name||t.name).join(', ');
+  const ctx  = `Título: ${ds.title||''}\nDescripción: ${ds.notes||''}\nEtiquetas: ${tags}\nOrg: ${ds.organization?.title||''}\nNombre técnico: ${ds.name||''}`;
+
+  const jobs = [
+    { field:'title', prompt:`${ctx}\n\nGenerá un título mejorado (máx 100 chars). Devolvé SOLO el título, sin comillas.` },
+    { field:'notes', prompt:`${ctx}\n\nGenerá una descripción mejorada (100-300 palabras). Devolvé SOLO la descripción.` },
+    { field:'tags',  prompt:`${ctx}\n\nGenerá 5-10 etiquetas en español, minúsculas, separadas por coma. Devolvé SOLO las etiquetas.` },
+  ];
+
+  for (const j of jobs) {
+    try {
+      const r = await claude(j.prompt);
+      if (j.field === 'tags') {
+        const ts = r.trim().split(',').map(t=>t.trim()).filter(Boolean);
+        S.sugg.tags = ts;
+        $(`sv-${j.field}`).innerHTML = `<div class="sugg-lbl">Sugerencia IA</div><div class="val-sugg"><div class="tags-row">${ts.map(t=>`<span class="tag-s">${esc(t)}</span>`).join('')}</div></div>`;
+      } else {
+        S.sugg[j.field] = r.trim();
+        $(`sv-${j.field}`).innerHTML = `<div class="sugg-lbl">Sugerencia IA</div><div class="val-sugg">${esc(r.trim())}</div>`;
+      }
+      $(`bt-${j.field}`).disabled = false;
+    } catch(e) { $(`sv-${j.field}`).innerHTML = errHtml(e.message); }
+  }
+}
+
+async function applyField(f) {
+  if (!S.apiKey) { alert('Necesitás clave de API para aplicar cambios.'); return; }
+  const btn = $(`bt-${f}`);
+  btn.disabled = true; btn.textContent = 'Aplicando...';
+  try {
+    const pl = { id: S.dataset.id };
+    if (f==='title') pl.title = S.sugg.title;
+    if (f==='notes') pl.notes = S.sugg.notes;
+    if (f==='tags')  pl.tags  = S.sugg.tags.map(t=>({name:t}));
+    await ckanPost('package_patch', pl);
+    btn.textContent = '✓ Aplicado'; btn.classList.add('btn--green-done');
+    if (f==='title') $('cv-title').textContent = S.sugg.title;
+    if (f==='notes') $('cv-notes').textContent = S.sugg.notes;
+    if (f==='tags')  $('cv-tags').innerHTML    = S.sugg.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join('');
+  } catch(e) {
+    alert('Error al aplicar: '+e.message);
+    btn.disabled=false; btn.textContent='✔ Aplicar sugerencia';
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   TAB 2 — RECURSOS
+   ═══════════════════════════════════════════════════════ */
+function renderResources() {
+  const rs = S.dataset.resources||[];
+  if (!rs.length) { $('res-c').innerHTML='<div class="empty">Sin recursos.</div>'; return; }
+  let h = `<p class="sec-title">Recursos (${rs.length})</p>`;
+  rs.forEach(r => {
+    h += `<div class="res-card" id="rc-${r.id}">
+      <div class="res-card-hdr">
+        <h4>${esc(r.name||r.id)}</h4>
+        <span class="fmt-badge">${esc((r.format||'N/A').toUpperCase())}</span>
+      </div>
+      <div class="res-card-body">
+        <div class="val-lbl">ID: <code>${esc(r.id)}</code></div>
+        <div class="val-lbl" style="margin-top:6px">Descripción actual:</div>
+        <div class="val-cur" id="cv-r-${r.id}">${esc(r.description||'(sin descripción)')}</div>
+        <div id="sv-r-${r.id}">${aiHtml()}</div>
+        <div class="apply-row">
+          <button class="btn btn--green" id="bt-r-${r.id}" onclick="applyRes('${r.id}')" disabled>✔ Aplicar sugerencia</button>
+        </div>
+      </div>
+    </div>`;
+  });
+  $('res-c').innerHTML = h;
+  genResSugg(rs);
+}
+
+async function genResSugg(rs) {
+  const ds = S.dataset;
+  for (const r of rs) {
+    try {
+      const txt = await claude(`Dataset: "${ds.title}"\nRecurso: "${r.name||''}"\nFormato: ${r.format||'?'}\nDescripción actual: "${r.description||''}"\n\nGenerá una descripción mejorada (1-3 oraciones). Devolvé SOLO la descripción.`);
+      S.resSugg[r.id] = txt.trim();
+      $(`sv-r-${r.id}`).innerHTML = `<div class="sugg-lbl" style="margin-top:8px">Sugerencia IA</div><div class="val-sugg">${esc(txt.trim())}</div>`;
+      $(`bt-r-${r.id}`).disabled = false;
+    } catch(e) { $(`sv-r-${r.id}`).innerHTML = errHtml(e.message); }
+  }
+}
+
+async function applyRes(rid) {
+  if (!S.apiKey) { alert('Necesitás clave de API para aplicar cambios.'); return; }
+  const btn = $(`bt-r-${rid}`);
+  btn.disabled=true; btn.textContent='Aplicando...';
+  try {
+    await ckanPost('resource_patch', { id:rid, description:S.resSugg[rid] });
+    btn.textContent='✓ Aplicado'; btn.classList.add('btn--green-done');
+    $(`cv-r-${rid}`).textContent = S.resSugg[rid];
+    const r = S.dataset.resources.find(x=>x.id===rid);
+    if (r) r.description = S.resSugg[rid];
+  } catch(e) { alert('Error: '+e.message); btn.disabled=false; btn.textContent='✔ Aplicar sugerencia'; }
+}
+
+/* ═══════════════════════════════════════════════════════
+   TAB 3 — JSON METADATA
+   ═══════════════════════════════════════════════════════ */
+async function renderJsonTab() {
+  const rs = S.dataset.resources||[];
+  const metas = rs.filter(r => r.name && /^metadatos/i.test(r.name.trim()) && (r.format||'').toLowerCase()==='json');
+  if (!metas.length) {
+    $('json-c').innerHTML = `<div class="not-found"><span style="font-size:20px">⚠</span>
+      <div>No se encontró ningún archivo JSON que comience con <strong>"Metadatos"</strong>.<br>
+      <span style="font-size:11px;color:#777">Recursos disponibles: ${rs.map(r=>`<em>${esc(r.name||r.id)}</em> (${esc(r.format||'?')})`).join(', ')||'ninguno'}</span></div></div>`;
+    return;
+  }
+  let h = `<p class="sec-title">Archivos de Metadatos JSON (${metas.length})</p>`;
+  metas.forEach(m => {
+    h += `<div class="json-block" id="jb-${m.id}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <strong style="color:#095399">${esc(m.name)}</strong>
+        <span style="display:flex;align-items:center;gap:8px;"><code style="font-size:11px;color:#777">${esc(m.id)}</code><span class="fmt-badge">JSON</span></span>
+      </div>
+      <div id="jbc-${m.id}"><div class="ai-gen"><span class="ai-spin"></span>Descargando y analizando con IA...</div></div>
+    </div>`;
+  });
+  $('json-c').innerHTML = h;
+  for (const m of metas) await analyzeJson(m);
+}
+
+async function analyzeJson(mr) {
+  const el = $(`jbc-${mr.id}`);
+  const ds = S.dataset;
+  try {
+    const base    = mr.name.replace(/^Metadatos[\s_\-]*/i,'').replace(/\.json$/i,'').toLowerCase();
+    const related = (ds.resources||[]).filter(r => {
+      if (r.id===mr.id) return false;
+      const rn = (r.name||'').toLowerCase().replace(/\.[^.]+$/,'');
+      return rn && (rn.includes(base)||base.includes(rn));
+    });
+    let orig = null;
+    try { const rr=await fetch(mr.url); if(rr.ok) orig=await rr.json(); } catch{}
+    const relDesc = related.length
+      ? related.map(r=>`• ${r.name} (${r.format||'?'}) [ID:${r.id}]: ${r.description||'sin desc'}`).join('\n')
+      : 'Sin recursos relacionados.';
+    const jsonStr = orig ? JSON.stringify(orig,null,2).substring(0,3500) : '(no disponible – CORS)';
+    const improved = await claude(
+      `Archivo: "${mr.name}" (ID:${mr.id})\nDataset: "${ds.title}"\nDescripción: "${ds.notes||''}"\nRecursos:\n${relDesc}\nJSON:\n${jsonStr}\n\n` +
+      `Generá una versión mejorada de este JSON con: 1) mejores descripciones de campos en español 2) tipo de dato inferido 3) ejemplo de valor. Devolvé SOLO el JSON válido sin markdown.`
+    );
+    S.jsonAn[mr.id] = improved;
+    let parsed = null;
+    try { parsed = JSON.parse(improved.replace(/^```json\s*/,'').replace(/```\s*$/,'').trim()); } catch{}
+    const showOrig = orig ? esc(JSON.stringify(orig,null,2).substring(0,1800)) : '<span style="color:#666">(no disponible)</span>';
+    const showImpr = esc((parsed ? JSON.stringify(parsed,null,2) : improved).substring(0,1800));
+    el.innerHTML = `
+      <div class="cols-2">
+        <div><div class="val-lbl" style="font-weight:bold;margin-bottom:6px">Archivo original</div><pre class="jp">${showOrig}</pre></div>
+        <div><div class="sugg-lbl" style="margin-bottom:6px">Versión mejorada con IA</div><pre class="jps">${showImpr}</pre></div>
+      </div>
+      <button class="btn btn--dl" onclick="dlJson('${mr.id}','${esc(mr.name)}')">⬇ Descargar JSON mejorado</button>`;
+  } catch(e) { el.innerHTML = errHtml('Error: '+e.message); }
+}
+
+function dlJson(rid, fname) {
+  const raw = S.jsonAn[rid]; if(!raw) return;
+  let out=raw; try { out=JSON.stringify(JSON.parse(raw.replace(/^```json\s*/,'').replace(/```\s*$/,'').trim()),null,2); } catch{}
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([out],{type:'application/json'}));
+  a.download=`mejorado_${fname.replace(/[^a-z0-9_\-.]/gi,'_')}`;
+  a.click(); URL.revokeObjectURL(a.href);
+}
+</script>
+</body>
+</html>
