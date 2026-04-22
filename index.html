@@ -344,7 +344,11 @@ pre.jps { background:#3e0053; color:#e1bee7; font-size:12px; line-height:1.5; pa
     </label>
     <span class="debug-badge" id="debugBadge">0 llamadas</span>
     <button class="btn" style="background:#546e7a;color:#fff;font-size:11px;padding:5px 12px;" onclick="copyLog()">📋 Copiar log</button>
+    <button class="btn" style="background:#1565c0;color:#fff;font-size:11px;padding:5px 12px;" onclick="runConnTest()">🔌 Test conectividad</button>
   </div>
+
+  <!-- ═══ CONNECTIVITY TEST ═══ -->
+  <div id="connTestResult" style="display:none;margin-bottom:16px;"></div>
 
   <!-- ═══ DEBUG PANEL ═══ -->
   <div class="debug-panel" id="debugPanel">
@@ -635,10 +639,29 @@ async function ckanFetch(method, endpoint, params, body) {
     entry.duration = Math.round(performance.now() - t0);
     entry.status   = resp.status;
 
-    let data;
-    try { data = await resp.json(); } catch(e) {
+    // Leer respuesta como texto primero para poder dar diagnóstico útil
+    const rawText = await resp.text();
+    entry.duration = Math.round(performance.now() - t0);  // actualizar por si acaso
+
+    // Detectar si el servidor devolvió HTML en lugar de JSON (CKAN redirige a login, etc.)
+    if (rawText.trimStart().startsWith('<')) {
       entry.state  = 'err';
-      entry.errMsg = `No se pudo parsear la respuesta como JSON: ${e.message}`;
+      entry.errMsg = `El servidor devolvió HTML en lugar de JSON (HTTP ${resp.status}).\n` +
+        `Esto suele pasar cuando:\n` +
+        `  • CKAN redirige a la página de login (API Key incorrecta o requerida)\n` +
+        `  • La URL del catálogo en proxy.py es incorrecta\n` +
+        `  • El proxy no está corriendo y la petición fue a otro servidor\n` +
+        `Preview HTML: ${rawText.substring(0, 120).replace(/\n/g,' ')}`;
+      entry.resBody = rawText.substring(0, 300);
+      renderLog();
+      throw new Error(entry.errMsg);
+    }
+
+    let data;
+    try { data = JSON.parse(rawText); } catch(e) {
+      entry.state  = 'err';
+      entry.errMsg = `Respuesta no es JSON válido (HTTP ${resp.status}): ${e.message}\nPreview: ${rawText.substring(0,120)}`;
+      entry.resBody = rawText.substring(0, 300);
       renderLog();
       throw new Error(entry.errMsg);
     }
@@ -687,6 +710,107 @@ const ckanGet  = (ep, p)    => ckanFetch('GET',  ep, p, null);
 const ckanPost = (ep, body) => ckanFetch('POST', ep, null, body);
 
 /* ─── API KEY ─────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════
+   TEST DE CONECTIVIDAD — diagnostica el proxy y la API CKAN
+   ═══════════════════════════════════════════════════════ */
+async function runConnTest() {
+  const box = $('connTestResult');
+  box.style.display = 'block';
+  box.innerHTML = `<div style="background:#fff;border:1px solid #ddd;border-radius:3px;padding:16px 18px;">
+    <strong style="color:#095399">🔌 Test de conectividad</strong>
+    <div id="ct-log" style="margin-top:10px;font-family:monospace;font-size:12px;line-height:1.8;"></div>
+  </div>`;
+
+  // Activar debug si no está activo
+  if (!debugEnabled) { $('debugToggle').checked = true; toggleDebug(true); }
+
+  const log = $('ct-log');
+  const row = (icon, msg, color='#333') => {
+    log.innerHTML += `<div style="color:${color}">${icon} ${msg}</div>`;
+  };
+
+  // ── 1. ¿Estamos en el proxy? ─────────────────────────────────────────────
+  row('⏳', `Origen de la página: <code>${location.origin}</code>`);
+  const viaProxy = !location.protocol.startsWith('file') && location.hostname !== 'test.catalogodatos.gub.uy';
+  if (location.protocol === 'file:') {
+    row('❌', 'El archivo se abrió como file:// — el proxy no está siendo usado. Iniciá proxy.py y abrí <strong>http://127.0.0.1:8080</strong>', '#c62828');
+    return;
+  }
+  row('✅', `Página servida desde: <strong>${location.origin}</strong>`, '#2e7d32');
+
+  // ── 2. ¿Responde el endpoint /api/3/action/status_show? ──────────────────
+  row('⏳', 'Probando /api/3/action/status_show ...');
+  try {
+    const t0 = performance.now();
+    const r  = await fetch('/api/3/action/status_show', {
+      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
+    });
+    const ms = Math.round(performance.now() - t0);
+    const ct = r.headers.get('Content-Type') || '';
+    row('', `  → HTTP ${r.status}  Content-Type: ${ct}  (${ms}ms)`);
+
+    if (ct.includes('text/html')) {
+      row('❌', '  El servidor devolvió HTML. El proxy está activo pero CKAN redirige a login o error.', '#c62828');
+      row('💡', '  Verificá que CKAN_BASE en proxy.py apunte al servidor correcto.', '#e65100');
+    } else if (r.status === 200) {
+      const data = await r.json();
+      if (data.success) {
+        row('✅', `  CKAN responde OK. Versión: <strong>${data.result?.ckan_version||'?'}</strong>  Sitio: <strong>${data.result?.site_title||'?'}</strong>`, '#2e7d32');
+      } else {
+        row('⚠️', `  CKAN respondió success=false: ${JSON.stringify(data.error)}`, '#e65100');
+      }
+    } else {
+      const txt = await r.text();
+      row('❌', `  HTTP ${r.status}. Primeros 200 chars: ${txt.substring(0,200)}`, '#c62828');
+    }
+  } catch(e) {
+    row('❌', `  Error de red: ${e.message}`, '#c62828');
+    row('💡', '  ¿Está corriendo proxy.py? Ejecutá: <code>python proxy.py</code>', '#e65100');
+    return;
+  }
+
+  // ── 3. ¿Funciona package_show con el ID actual? ───────────────────────────
+  const dsId = $('dsId').value.trim();
+  if (dsId) {
+    row('⏳', `Probando package_show con id="${dsId}" ...`);
+    try {
+      const t0 = performance.now();
+      const r  = await fetch(`/api/3/action/package_show?id=${encodeURIComponent(dsId)}`, {
+        headers: {
+          'Accept':        'application/json',
+          'Content-Type':  'application/json',
+          ...(S.apiKey ? {'X-CKAN-API-Key': S.apiKey} : {})
+        }
+      });
+      const ms  = Math.round(performance.now() - t0);
+      const ct  = r.headers.get('Content-Type') || '';
+      const txt = await r.text();
+      row('', `  → HTTP ${r.status}  Content-Type: ${ct}  (${ms}ms)`);
+
+      if (ct.includes('text/html')) {
+        row('❌', `  Respuesta HTML — preview: ${txt.substring(0,150)}`, '#c62828');
+      } else {
+        try {
+          const data = JSON.parse(txt);
+          if (data.success) {
+            row('✅', `  Dataset encontrado: <strong>${data.result?.title||dsId}</strong>`, '#2e7d32');
+          } else {
+            row('❌', `  CKAN error: ${data.error?.message || JSON.stringify(data.error)}`, '#c62828');
+          }
+        } catch {
+          row('❌', `  No es JSON válido. Preview: ${txt.substring(0,200)}`, '#c62828');
+        }
+      }
+    } catch(e) {
+      row('❌', `  Error: ${e.message}`, '#c62828');
+    }
+  } else {
+    row('ℹ️', 'Ingresá un ID de dataset para testear package_show.', '#555');
+  }
+
+  row('✅', 'Test completado.', '#095399');
+}
+
 function saveKey() {
   const v = $('apiKey').value.trim();
   const s = $('keyStatus');
