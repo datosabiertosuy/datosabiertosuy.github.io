@@ -453,8 +453,13 @@ pre.jps { background:#3e0053; color:#e1bee7; font-size:12px; line-height:1.5; pa
 <script>
 'use strict';
 
-/* ─── Configuración ──────────────────────────────────── */
-const CKAN_BASE   = 'https://test.catalogodatos.gub.uy';
+/* ─── Configuración ──────────────────────────────────────────────────────
+   CKAN_BASE: usa URL relativa ('') para que las peticiones vayan al mismo
+   servidor que sirve esta página (el proxy Python).
+   Si abrís el HTML directamente sin el proxy, cambiá esto a:
+     const CKAN_BASE = 'http://127.0.0.1:8080';
+   ─────────────────────────────────────────────────────────────────────── */
+const CKAN_BASE   = '';          // URL relativa → pasa por el proxy
 const CLAUDE_MDL  = 'claude-sonnet-4-20250514';
 
 /* ─── Estado ─────────────────────────────────────────── */

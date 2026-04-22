@@ -64,29 +64,59 @@ Esta aplicación es una página web autocontenida (`index.html`) que replica el 
 ## 🚀 Instalación y uso
 
 ### Requisitos
+- Python 3.8 o superior
 - Navegador web moderno (Chrome, Firefox, Edge, Safari)
 - Acceso a internet (para comunicarse con la API del catálogo y la API de Claude)
 - Una **clave de API de CKAN** con permisos de escritura sobre los datasets que querés editar
-- La aplicación debe ser servida desde un dominio que tenga acceso al catálogo (para evitar restricciones CORS)
 
-### Uso rápido
+### Por qué se necesita el proxy
 
-1. Descargá o cloná este repositorio
-2. Abrí `index.html` en tu navegador (o deployalo en un servidor web)
-3. Ingresá tu **clave de API CKAN** en el campo correspondiente y hacé clic en "Guardar"
+La aplicación llama directamente a la API de CKAN desde el browser. Los navegadores modernos bloquean este tipo de peticiones cross-origin por la política CORS, generando el error `Failed to fetch`. El proxy Python resuelve esto actuando como intermediario: recibe las peticiones del browser, las reenvía al catálogo, y agrega el header `Access-Control-Allow-Origin: *` en la respuesta.
+
+```
+Browser  ──→  proxy.py (:8080)  ──→  test.catalogodatos.gub.uy
+         ←──  + CORS headers   ←──
+```
+
+### Instalación
+
+```bash
+# 1. Clonar el repositorio
+git clone https://github.com/tu-usuario/ckan-metadata-assistant.git
+cd ckan-metadata-assistant
+
+# 2. Instalar dependencias Python
+pip install -r requirements.txt
+
+# 3. Iniciar el proxy
+python proxy.py
+```
+
+### Uso
+
+1. Iniciá el proxy: `python proxy.py`
+2. Abrí **http://127.0.0.1:8080** en tu navegador
+3. Ingresá tu **clave de API CKAN** y hacé clic en "Guardar"
 4. Ingresá el **ID del conjunto de datos** (UUID o nombre-slug) y hacé clic en "Analizar"
 5. Revisá las sugerencias generadas en cada tab y aplicá los cambios que considerés pertinentes
 
-```
-# Clonar el repositorio
-git clone https://github.com/tu-usuario/ckan-metadata-assistant.git
+### Opciones del proxy
 
-# Abrir en el navegador (sin servidor)
-open index.html
+```bash
+# Puerto por defecto (8080)
+python proxy.py
 
-# O servir con cualquier servidor HTTP simple
-npx serve .
-python3 -m http.server 8080
+# Puerto personalizado
+python proxy.py --port 3000
+
+# Escuchar en todas las interfaces (acceso desde la red local)
+python proxy.py --host 0.0.0.0 --port 8080
+
+# Apuntar a otro catálogo CKAN
+python proxy.py --ckan https://catalogodatos.gub.uy
+
+# Ver todas las opciones
+python proxy.py --help
 ```
 
 ### ¿Dónde encuentro mi API Key de CKAN?
@@ -144,15 +174,21 @@ index.html
 
 ---
 
-## ⚠️ Consideraciones CORS
+## ⚠️ CORS y el proxy
 
-La API de CKAN puede rechazar peticiones desde ciertos orígenes por restricciones de CORS. Si recibís el error `Failed to fetch`, el panel de debug mostrará las causas probables:
+El proxy Python incluido resuelve automáticamente las restricciones CORS agregando el header `Access-Control-Allow-Origin: *` en todas las respuestas de la API CKAN. Mientras uses la aplicación a través del proxy (`http://127.0.0.1:8080`), no deberías tener problemas.
 
-- La aplicación se está abriendo como archivo local (`file://`) — servila desde un servidor HTTP
-- El servidor del catálogo no permite el origen desde el que estás haciendo la petición
-- Sin conectividad con el servidor del catálogo
+Si aun así recibís el error `Failed to fetch`, el **panel de debug** (toggle en la interfaz) mostrará el detalle exacto:
 
-**Solución recomendada**: deployar la aplicación en el mismo dominio del catálogo o en un dominio que esté en la lista de orígenes permitidos por la configuración CORS del servidor CKAN.
+- La URL completa que se intentó llamar
+- El código de error HTTP
+- Las causas más probables: proxy no iniciado, puerto incorrecto, sin conectividad con el catálogo
+
+Si necesitás acceder desde otra máquina de la red, iniciá el proxy con:
+```bash
+python proxy.py --host 0.0.0.0
+```
+Y accedé desde `http://<IP-del-servidor>:8080`.
 
 ---
 
@@ -168,24 +204,30 @@ La API de CKAN puede rechazar peticiones desde ciertos orígenes por restriccion
 
 ### Apuntar a otro catálogo CKAN
 
-Editá la constante al inicio del bloque `<script>`:
+Desde la línea de comandos del proxy:
+```bash
+python proxy.py --ckan https://catalogodatos.gub.uy
+```
 
+O editando la constante en `index.html` (solo si no usás el proxy):
 ```javascript
-const CKAN_BASE = 'https://mi-otro-catalogo.gub.uy';
+const CKAN_BASE = 'http://127.0.0.1:8080';  // con proxy local
+const CKAN_BASE = '';                         // URL relativa (default, proxy en mismo host)
 ```
 
 ### Cambiar el entorno (test → producción)
 
-```javascript
-// Ambiente de test
-const CKAN_BASE = 'https://test.catalogodatos.gub.uy';
+```bash
+# Test
+python proxy.py --ckan https://test.catalogodatos.gub.uy
 
-// Producción
-const CKAN_BASE = 'https://catalogodatos.gub.uy';
+# Producción
+python proxy.py --ckan https://catalogodatos.gub.uy
 ```
 
 ### Cambiar el modelo de IA
 
+En `index.html`:
 ```javascript
 const CLAUDE_MDL = 'claude-sonnet-4-20250514'; // Podés cambiar por otro modelo de Anthropic
 ```
@@ -196,7 +238,9 @@ const CLAUDE_MDL = 'claude-sonnet-4-20250514'; // Podés cambiar por otro modelo
 
 ```
 .
-├── index.html          # Aplicación completa (autocontenida)
+├── index.html          # Aplicación web (autocontenida, servida por el proxy)
+├── proxy.py            # Proxy inverso Python — resuelve CORS
+├── requirements.txt    # Dependencias Python (solo 'requests')
 └── README.md           # Este archivo
 ```
 
