@@ -899,9 +899,21 @@ async function applyRes(rid) {
 /* ═══════════════════════════════════════════════════════
    TAB 3 — JSON METADATA
    ═══════════════════════════════════════════════════════ */
+/* Detecta si un recurso es un archivo de metadatos JSON:
+   - formato JSON  Y
+   - su nombre de recurso ORE el nombre del archivo en la URL
+     empieza con "metadatos" (case-insensitive) */
+function isMetaJson(r) {
+  if ((r.format||'').toLowerCase() !== 'json') return false;
+  const nameMatch = r.name && /^metadatos/i.test(r.name.trim());
+  const urlFile   = (r.url||'').split('/').pop().split('?')[0];
+  const urlMatch  = /^metadatos/i.test(urlFile);
+  return nameMatch || urlMatch;
+}
+
 async function renderJsonTab() {
   const rs = S.dataset.resources||[];
-  const metas = rs.filter(r => r.name && /^metadatos/i.test(r.name.trim()) && (r.format||'').toLowerCase()==='json');
+  const metas = rs.filter(isMetaJson);
   if (!metas.length) {
     $('json-c').innerHTML = `<div class="not-found"><span style="font-size:20px">⚠</span>
       <div>No se encontró ningún archivo JSON que comience con <strong>"Metadatos"</strong>.<br>
@@ -933,7 +945,13 @@ async function analyzeJson(mr) {
       return rn && (rn.includes(base)||base.includes(rn));
     });
     let orig = null;
-    try { const rr=await fetch(mr.url); if(rr.ok) orig=await rr.json(); } catch{}
+    try {
+      // Redirigimos la descarga del archivo a través del proxy:
+      // reemplazamos el dominio del catálogo por una ruta relativa /proxy-resource?url=...
+      const proxyUrl = '/proxy-resource?url=' + encodeURIComponent(mr.url);
+      const rr = await fetch(proxyUrl);
+      if (rr.ok) orig = await rr.json();
+    } catch{}
     const relDesc = related.length
       ? related.map(r=>`• ${r.name} (${r.format||'?'}) [ID:${r.id}]: ${r.description||'sin desc'}`).join('\n')
       : 'Sin recursos relacionados.';

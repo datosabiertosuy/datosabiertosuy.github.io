@@ -76,9 +76,15 @@ class ProxyHandler(BaseHTTPRequestHandler):
             self._serve_html()
             return
 
-        # Proxy de la API CKAN
+        # Proxy de la API CKAN  (/api/3/action/...)
         if parsed.path.startswith("/api/"):
             self._proxy_request("GET", parsed)
+            return
+
+        # Proxy de recurso arbitrario por URL  (/proxy-resource?url=https://...)
+        # Usado para descargar archivos de recursos (JSON, CSV) evitando CORS
+        if parsed.path == "/proxy-resource":
+            self._proxy_resource(parsed)
             return
 
         # Proxy de recursos estáticos del catálogo (CSS, imágenes, etc.)
@@ -123,9 +129,13 @@ class ProxyHandler(BaseHTTPRequestHandler):
         if parsed.query:
             target_url += f"?{parsed.query}"
 
-        # Reenviar headers relevantes (incluyendo X-CKAN-API-Key)
-        forward_headers = {}
-        for h in ("X-CKAN-API-Key", "Authorization", "Content-Type"):
+        # Headers que siempre enviamos al catálogo
+        forward_headers = {
+            "Accept":       "application/json",   # ← forzar JSON, evita que CKAN devuelva HTML
+            "Content-Type": "application/json",
+        }
+        # Propagar API Key si viene del browser
+        for h in ("X-CKAN-API-Key", "Authorization"):
             val = self.headers.get(h)
             if val:
                 forward_headers[h] = val
@@ -136,7 +146,11 @@ class ProxyHandler(BaseHTTPRequestHandler):
             length = int(self.headers.get("Content-Length", 0))
             body = self.rfile.read(length) if length else None
 
-        log.info("→ %s  %s", method, target_url)
+        log.info("→ PROXY %s  %s", method, target_url)
+        if forward_headers.get("X-CKAN-API-Key"):
+            log.info("  API-Key: %s…", forward_headers["X-CKAN-API-Key"][:8])
+        if body:
+            log.info("  Body: %s", body[:200])
 
         try:
             resp = requests.request(
@@ -146,21 +160,47 @@ class ProxyHandler(BaseHTTPRequestHandler):
                 data=body,
                 timeout=30,
                 verify=True,
+                allow_redirects=True,
             )
 
-            # Leer respuesta
             resp_body = resp.content
+            resp_ct   = resp.headers.get("Content-Type", "")
 
-            log.info("← %s  %d  (%d bytes)", target_url.split("/")[-1].split("?")[0],
-                     resp.status_code, len(resp_body))
+            log.info("← %d  Content-Type: %s  (%d bytes)",
+                     resp.status_code, resp_ct, len(resp_body))
 
-            # Enviar respuesta al browser con CORS
+            # Si CKAN devolvió HTML en vez de JSON, registrar el inicio para facilitar debug
+            if "text/html" in resp_ct:
+                preview = resp_body[:200].decode("utf-8", errors="replace")
+                log.warning("  ⚠ CKAN devolvió HTML en lugar de JSON. Preview: %s", preview)
+                # Devolver error JSON legible al browser en lugar del HTML
+                error_payload = json.dumps({
+                    "success": False,
+                    "error": {
+                        "__type": "Proxy Error",
+                        "message": (
+                            f"El catálogo devolvió HTML (HTTP {resp.status_code}) en lugar de JSON. "
+                            f"URL consultada: {target_url}. "
+                            f"Posibles causas: el endpoint no existe, hay un redirect, "
+                            f"o el catálogo requiere autenticación para esta operación."
+                        ),
+                        "upstream_status": resp.status_code,
+                        "upstream_url":    target_url,
+                        "upstream_preview": preview,
+                    }
+                }).encode("utf-8")
+                self.send_response(502)
+                self._send_cors()
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Content-Length", str(len(error_payload)))
+                self.end_headers()
+                self.wfile.write(error_payload)
+                return
+
+            # Respuesta normal — reenviar al browser con CORS
             self.send_response(resp.status_code)
             self._send_cors()
-
-            # Content-Type de la respuesta original
-            ct = resp.headers.get("Content-Type", "application/json")
-            self.send_header("Content-Type", ct)
+            self.send_header("Content-Type", resp_ct or "application/json")
             self.send_header("Content-Length", str(len(resp_body)))
             self.end_headers()
             self.wfile.write(resp_body)
@@ -173,6 +213,41 @@ class ProxyHandler(BaseHTTPRequestHandler):
             self._send_error(504, f"Timeout al conectar con {CKAN_BASE}")
         except Exception as e:
             self._send_error(500, f"Error inesperado en el proxy: {e}")
+
+    # ── Proxy de recurso por URL arbitraria ───────────────────────────────────
+    # Endpoint: /proxy-resource?url=https://test.catalogodatos.gub.uy/...
+    # Usado para descargar archivos de recursos (JSON, CSV) sin que el browser
+    # sea bloqueado por CORS.
+    def _proxy_resource(self, parsed):
+        from urllib.parse import parse_qs, unquote
+        qs   = parse_qs(parsed.query)
+        urls = qs.get("url", [])
+        if not urls:
+            self._send_error(400, "Parámetro 'url' requerido")
+            return
+
+        target_url = unquote(urls[0])
+
+        # Seguridad: solo permitir URLs del catálogo configurado
+        if not target_url.startswith(CKAN_BASE):
+            self._send_error(403, f"URL no permitida. Solo se aceptan recursos de {CKAN_BASE}")
+            return
+
+        log.info("→ RESOURCE  %s", target_url)
+        try:
+            resp      = requests.get(target_url, timeout=30, verify=True)
+            resp_body = resp.content
+            resp_ct   = resp.headers.get("Content-Type", "application/octet-stream")
+            log.info("← %d  %s  (%d bytes)", resp.status_code, resp_ct, len(resp_body))
+
+            self.send_response(resp.status_code)
+            self._send_cors()
+            self.send_header("Content-Type", resp_ct)
+            self.send_header("Content-Length", str(len(resp_body)))
+            self.end_headers()
+            self.wfile.write(resp_body)
+        except Exception as e:
+            self._send_error(502, f"No se pudo descargar el recurso: {e}")
 
     # ── Proxy recursos estáticos (CSS, imágenes) ──────────────────────────────
     def _proxy_static(self, parsed):
